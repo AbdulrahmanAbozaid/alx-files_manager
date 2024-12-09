@@ -31,7 +31,7 @@ class RedisClient {
 
   async set(key, value, time) {
     // Validate inputs
-    if (typeof key !== 'string' || typeof value !== 'string') {
+    if (typeof key !== 'string') {
       throw new Error('The key and value to be set must be strings');
     }
     if (typeof time !== 'number') {
@@ -39,7 +39,7 @@ class RedisClient {
     }
 
     setTimeout(() => {
-      this.client.set(key, value);
+      return this.client.set(key, value);
     }, time);
   }
 
@@ -51,4 +51,5 @@ class RedisClient {
   }
 }
 
-export const client = new RedisClient();
+const redisClient = new RedisClient();
+export default redisClient;
