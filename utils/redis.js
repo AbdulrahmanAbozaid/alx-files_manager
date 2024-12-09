@@ -15,7 +15,7 @@ class RedisClient {
       .then(() => {
 	return true;
       })
-      .catch(err => {
+      .catch(() => {
 	return false;
       });
   }
@@ -39,7 +39,7 @@ class RedisClient {
     }
 
     setTimeout(() => {
-      await this.client.set(key, value);
+      this.client.set(key, value);
     }, time);
   }
 
@@ -51,5 +51,4 @@ class RedisClient {
   }
 }
 
-const client = RedisClient();
-module.exports = client;
+export const client = new RedisClient();
