@@ -7,17 +7,21 @@ import { createClient } from 'redis';
 class RedisClient {
   constructor() {
     this.client = createClient();
-    this.client.on('error', (err) => console.log('An error occurred on the redis client: ', err));
+    this.client.on('error', (err) => console.log('An error occurred while handling the client: ', err));
+
+    this.connected = false;
+
+    this.client.connect()
+      .then(() => {
+	this.connected = true;
+      })
+      .catch((err) => {
+	console.log('Error connecting to redis-server; ', err);
+      });
   }
 
   isAlive() {
-    this.client.connect()
-      .then(() => {
-	return true;
-      })
-      .catch(() => {
-	return false;
-      });
+    return this.connected;
   }
 
   async get(key) {
