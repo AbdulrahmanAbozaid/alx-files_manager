@@ -5,6 +5,7 @@ class DBClient {
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || '27017';
     this.dbName = process.env.DB_DATABASE || 'files_manager';
+    this.db = this.client.db(this.dbName);
 
     const uri = `mongodb://${host}:${port}`;
     this.client = new MongoClient(uri, {
@@ -31,8 +32,7 @@ class DBClient {
     if (!this.isAlive()) {
       return 0;
     }
-    const db = this.client.db(this.dbName);
-    const users = db.collection('users');
+    const users = this.db.collection('users');
     return users.countDocuments();
   }
 
@@ -40,8 +40,7 @@ class DBClient {
     if (!this.isAlive()) {
       return 0;
     }
-    const db = this.client.db(this.dbName);
-    const users = db.collection('files');
+    const users = this.db.collection('files');
     return users.countDocuments();
   }
 }
