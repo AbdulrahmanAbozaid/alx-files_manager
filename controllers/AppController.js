@@ -1,42 +1,21 @@
 /**
  * Contains routes to contrl app behaviours includubg status, stats etc
  */
-import { Router } from 'express';
-import dbClient  from '../utils/db.js';
 import redisClient from '../utils/redis.js';
+import dbClient from '../utils/db.js';
 
-export default class AppController {
-  router = Router();
-
-  static getStatus() {
-    router.get('/status', (req, res) => {
-      try {
-	status = {'redis': redisClient.isAlive(), 'db': dbClient.isAlive()};
-	res.status(200);
-	res.send(status);
-      } catch (err) {
-	res.status(500);
-      }
-    });
+class AppController {
+  static async getStatus(req, res) {
+    const redisAlive = redisClient.isAlive();
+    const dbAlive = dbClient.isAlive();
+    res.status(200).json({ redis: redisAlive, db: dbAlive });
   }
 
-  static getStats() {
-    router.get('/stats', (req, res) => {
-      try {
-	dbClient.nbUsers()
-	  .then((result) => {
-	    usr = res;
-	  });
-	dbClient.nbFiles()
-	  .then((result) => {
-	    files = result;
-	  });
-	stats = {"users": usr, "files": files};
-	res.status(200);
-	res.send(stats);
-      } catch (err) {
-	res.status(500);
-      }
-    });
+  static async getStats(req, res) {
+    const usersCount = await dbClient.nbUsers();
+    const filesCount = await dbClient.nbFiles();
+    res.status(200).json({ users: usersCount, files: filesCount });
   }
 }
+
+export default AppController;

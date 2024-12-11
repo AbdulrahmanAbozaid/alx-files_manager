@@ -1,23 +1,18 @@
-/**
- * Set up a redis client for caching
- */
-import { createClient } from 'redis';
-
+import redis from 'redis';
+import { promisify } from 'util';
 
 class RedisClient {
   constructor() {
-    this.client = createClient();
-    this.client.on('error', (err) => console.log('An error occurred while handling the client: ', err));
+    this.client = redis.createClient();
+    this.connected = true;
+    this.client.on('error', (err) => {
+      this.connected = false;
+      console.error('Redis connection error:', err);
+    });
 
-    this.connected = false;
-
-    this.client.connect()
-      .then(() => {
-	this.connected = true;
-      })
-      .catch((err) => {
-	console.log('Error connecting to redis-server; ', err);
-      });
+    this.getAsync = promisify(this.client.get).bind(this.client);
+    this.setAsync = promisify(this.client.setex).bind(this.client);
+    this.delAsync = promisify(this.client.del).bind(this.client);
   }
 
   isAlive() {
@@ -25,33 +20,25 @@ class RedisClient {
   }
 
   async get(key) {
-    // Validate input
-    if (typeof key !== 'string') {
-      throw new Error('The passed key must be a string');
+    if (!this.isAlive()) {
+      return 0;
     }
-
-    return await this.client.get(key);
+    const res = await this.getAsync(key);
+    return res;
   }
 
-  async set(key, value, time) {
-    // Validate inputs
-    if (typeof key !== 'string') {
-      throw new Error('The key and value to be set must be strings');
+  async set(key, value, duration) {
+    if (!this.isAlive()) {
+      return;
     }
-    if (typeof time !== 'number') {
-      throw new Error('The time to wait must be a number');
-    }
-
-    setTimeout(() => {
-      return this.client.set(key, value);
-    }, time);
+    await this.setAsync(key, duration, value);
   }
 
   async del(key) {
-    if (typeof key !== 'string') {
-      throw new Error('The key passed must be a string');
+    if (!this.isAlive()) {
+      return;
     }
-    await this.client.del(key);
+    await this.delAsync(key);
   }
 }
 
