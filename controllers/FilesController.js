@@ -1,4 +1,4 @@
-// import { ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 // import mime from 'mime-types';
 import path from 'path';
 import fs from 'fs';
@@ -10,7 +10,8 @@ import redisClient from '../utils/redis';
 class FilesController {
   static async postUpload(req, res) {
     const {
-      name, type, data, parentId = 0, isPublic = false,
+      name, type, data,
+      parentId = 0, isPublic = false,
     } = req.body;
     const token = req.header('X-Token');
 
@@ -39,7 +40,7 @@ class FilesController {
     if (parentId !== 0) {
       const parentFile = await dbClient.db
         .collection('files')
-        .findOne({ _id: parentId });
+        .findOne({ _id: new ObjectId(parentId) });
       if (!parentFile) {
         return res.status(400).json({ error: 'Parent not found' });
       }
@@ -74,8 +75,16 @@ class FilesController {
       localPath,
     });
 
-    // Return the new file document
-    return res.status(201).json(result.ops[0]);
+    // console.log(result)
+
+    return res.status(201).json({
+      id: result.ops[0]._id,
+      userId: result.ops[0].userId,
+      name,
+      type,
+      isPublic: result.ops[0].isPublic,
+      parentId,
+    });
   }
 
   // Helper function to get user by token
