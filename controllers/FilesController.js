@@ -118,7 +118,7 @@ class FilesController {
     // Find the file document
     const file = await dbClient.db
       .collection('files')
-      .findOne({ _id: id, userId });
+      .findOne({ _id: new ObjectId(id), userId: new ObjectId(userId) });
 
     if (!file) {
       return res.status(404).json({ error: 'Not found' });
@@ -146,7 +146,7 @@ class FilesController {
     // Fetch files based on parentId and pagination
     const files = await dbClient.db
       .collection('files')
-      .find({ userId, parentId })
+      .find({ userId: new ObjectId(userId), parentId: new ObjectId(parentId) })
       .project({
         localPath: 0,
       })

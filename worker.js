@@ -1,8 +1,8 @@
 const Bull = require('bull');
 const thumbnail = require('image-thumbnail');
 const fs = require('fs');
-const path = require('path');
-const dbClient = require('./utils/db'); // Ensure you have your DB utility file
+// const path = require('path');
+const dbClient = require('./utils/db');
 
 // Initialize the Bull queue
 const fileQueue = new Bull('fileQueue');
@@ -28,7 +28,7 @@ fileQueue.process(async (job) => {
   for (const size of sizes) {
     try {
       const options = { width: size };
-      const thumbnailBuffer = await thumbnail(filePath, options);
+      const thumbnailBuffer = thumbnail(filePath, options);
 
       const thumbnailPath = `${filePath}_${size}`;
       fs.writeFileSync(thumbnailPath, thumbnailBuffer);
@@ -36,7 +36,7 @@ fileQueue.process(async (job) => {
     } catch (error) {
       console.error(
         `Failed to generate thumbnail for size ${size}:`,
-        error.message
+        error.message,
       );
     }
   }
