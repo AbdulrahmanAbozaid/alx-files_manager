@@ -12,7 +12,6 @@ class DBClient {
     });
 
     this.connected = false;
-    this.db = null;
 
     this.client
       .connect()
@@ -47,4 +46,5 @@ class DBClient {
 }
 
 const dbClient = new DBClient();
+
 export default dbClient;

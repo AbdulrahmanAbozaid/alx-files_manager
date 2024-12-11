@@ -1,8 +1,8 @@
 import { Queue } from 'bull';
-import path from 'path';
+// import path from 'path';
 import fs from 'fs';
 import { generateThumbnail } from 'image-thumbnail';
-import dbClient from './db.js'; // Assuming DBClient is set up correctly
+import dbClient from './db';
 
 const fileQueue = new Queue('fileQueue');
 
@@ -19,17 +19,17 @@ fileQueue.process(async (job) => {
 
   const file = await dbClient.db
     .collection('files')
-    .findOne({ _id: fileId, userId: userId });
+    .findOne({ _id: fileId, userId });
   if (!file) {
     throw new Error('File not found');
   }
 
   // Generate thumbnails
-  const localPath = file.localPath;
+  const { localPath } = file;
   const sizes = [500, 250, 100];
   try {
-    for (let size of sizes) {
-      const thumbnail = await generateThumbnail(localPath, { width: size });
+    for (const size of sizes) {
+      const thumbnail = generateThumbnail(localPath, { width: size });
       const thumbnailPath = `${localPath}_${size}`;
       fs.writeFileSync(thumbnailPath, thumbnail);
     }

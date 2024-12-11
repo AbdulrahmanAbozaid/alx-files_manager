@@ -1,7 +1,8 @@
-import { verifyBasicAuth } from '../utils/auth';
 import { v4 as uuidv4 } from 'uuid';
-import redisClient from '../utils/redis';
+import crypto from 'crypto';
 import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
+import verifyBasicAuth from '../utils/auth';
 
 class AuthController {
   // GET /connect - Sign-in the user by generating a token
@@ -22,8 +23,8 @@ class AuthController {
     // Find the user in the database by email and check the password
     const user = await dbClient.db.collection('users').findOne({ email });
     if (
-      !user ||
-      user.password !== crypto.createHash('sha1').update(password).digest('hex')
+      !user
+      || user.password !== crypto.createHash('sha1').update(password).digest('hex')
     ) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

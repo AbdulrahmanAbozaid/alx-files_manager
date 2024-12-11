@@ -2,6 +2,7 @@
  * Defines a class holding middlewares to be used on routes
  */
 import crypto from 'crypto';
+import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 
@@ -60,7 +61,7 @@ class UsersController {
     }
 
     // Find the user in the database
-    const user = await dbClient.db.collection('users').findOne({ _id: userId });
+    const user = await dbClient.db.collection('users').findOne({ _id: new ObjectId(userId) });
 
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
