@@ -11,7 +11,7 @@ class RedisClient {
     });
 
     this.getAsync = promisify(this.client.get).bind(this.client);
-    this.setAsync = promisify(this.client.setex).bind(this.client); // setex for setting with expiration
+    this.setAsync = promisify(this.client.setex).bind(this.client);
     this.delAsync = promisify(this.client.del).bind(this.client);
   }
 
@@ -23,20 +23,22 @@ class RedisClient {
     if (!this.isAlive()) {
       return 0;
     }
-    return await this.getAsync(key);
+    const res = await this.getAsync(key);
+    return res;
   }
 
   async set(key, value, duration) {
     if (!this.isAlive()) {
       return;
     }
-    return await this.setAsync(key, duration, value);
+    await this.setAsync(key, duration, value);
   }
 
   async del(key) {
     if (!this.isAlive()) {
       return;
     }
+    await this.delAsync(key);
   }
 }
 
