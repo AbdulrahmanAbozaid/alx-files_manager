@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-// import mime from 'mime-types';
+import mime from 'mime-types';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
@@ -238,6 +238,56 @@ class FilesController {
       .findOne({ _id: new ObjectId(id) });
 
     return res.status(200).json(updatedFileData);
+  }
+
+  // GET /files/:id/data
+  static async getFile(req, res) {
+    const { id } = req.params;
+    const token = req.header('X-Token');
+
+    // Retrieve the file document
+    const file = await dbClient.db
+      .collection('files')
+      .findOne({ _id: new ObjectId(id) });
+
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    // Check if the file is public or if the user is the owner
+    if (!file.isPublic) {
+      if (!token) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      // Retrieve the user from Redis based on token
+      const userId = await redisClient.get(`auth_${token}`);
+      if (!userId || userId !== file.userId.toString()) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+    }
+
+    // Check if the file is a folder
+    if (file.type === 'folder') {
+      return res.status(400).json({ error: "A folder doesn't have content" });
+    }
+
+    // Check if the file is locally present
+    const filePath = file.localPath;
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    // Get the MIME type based on the file extension
+    const mimeType = mime.lookup(file.name);
+    if (!mimeType) {
+      return res.status(400).json({ error: 'Invalid MIME type' });
+    }
+
+    // Return the file content with the appropriate MIME type
+    const fileContent = fs.readFileSync(filePath);
+    res.setHeader('Content-Type', mimeType);
+    return res.status(200).send(fileContent);
   }
 }
 
