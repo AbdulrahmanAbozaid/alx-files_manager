@@ -1,6 +1,6 @@
 import dbClient from '../utils/db';
 import { ObjectId } from 'mongodb';
-import { getUserFromToken } from '../utils/auth';
+// import { getUserFromToken } from '../utils/auth';
 import mime from 'mime-types';
 import fs from 'fs';
 
