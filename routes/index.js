@@ -2,26 +2,39 @@
  * Central repository of all defined routes in the express.js app
  */
 import { Router } from 'express';
-
-const router = Router(); // Routing object for defining exportable routes
-
-// Import routes defined elsewhere i.e in controller/
-import AppController from '../controllers/AppController.js'; // AppController is a class
+import AppController from '../controllers/AppController';
 import FilesController from '../controllers/FilesController';
+import UsersController from '../controllers/UsersController';
+import AuthController from '../controllers/AuthController';
 
-// Add them to the router
+const router = Router();
+
+// status & stats
 router.use('/status', AppController.getStatus);
 router.use('/stats', AppController.getStats);
+
+// Users Routes
+
+// POST /users - Create a new user
+router.post('/users', UsersController.postNew);
+
+// GET /connect - Sign-in and generate token
+router.get('/connect', AuthController.getConnect);
+
+// GET /disconnect - Sign-out and invalidate token
+router.get('/disconnect', AuthController.getDisconnect);
+
+// GET /users/me - Retrieve user information based on the token
+router.get('/users/me', UsersController.getMe);
 
 // Files Routes
 router.post('/files', FilesController.postUpload);
 
 router.get('/files/:id', FilesController.getShow);
-router.get('/files/:id/data', FilesController.getFile);
+// router.get('/files/:id/data', FilesController.getFile);
 router.get('/files', FilesController.getIndex);
 
-router.put('/files/:id/publish', FilesController.putPublish);
-router.put('/files/:id/unpublish', FilesController.putUnpublish);
+// router.put('/files/:id/publish', FilesController.putPublish);
+// router.put('/files/:id/unpublish', FilesController.putUnpublish);
 
-// export the router, so that it can be imported nad used by the express.js app
 export default router;
