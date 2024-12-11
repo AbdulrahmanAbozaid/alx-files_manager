@@ -17,7 +17,7 @@ $ curl 0.0.0.0:5000/status ; echo ""
 $
 ```
 
-##Routes
+## Routes
 _/status_: Retrieve the status of the redis and mongoDB servers, returns a JSON
 ```
 $ curl 0.0.0.0:5000/status ; echo ""
@@ -109,5 +109,5 @@ Hello Webstack!
 
 ```
 
-##Contribute
+## Contribute
 To change the port and host to which the app connects i.e make it available on the internet, see the [The Console App Interface](./server.js)
