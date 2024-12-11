@@ -1,45 +1,56 @@
-const Bull = require('bull');
-const thumbnail = require('image-thumbnail');
-const fs = require('fs');
-// const path = require('path');
-const dbClient = require('./utils/db');
+import Bull from 'bull';
+import imageThumbnail from 'image-thumbnail';
+import fs from 'fs';
+import { ObjectId } from 'mongodb';
+// import path from 'path';
+// import { v4 as uuidv4 } from 'uuid';
+import dbClient from './utils/db';
 
-// Initialize the Bull queue
-const fileQueue = new Bull('fileQueue');
-
-// Process the queue
-fileQueue.process(async (job) => {
-  const { fileId, userId } = job.data;
-
-  // Validation
-  if (!fileId) throw new Error('Missing fileId');
-  if (!userId) throw new Error('Missing userId');
-
-  // Find file document in DB
-  const file = await dbClient.files.findOne({ _id: fileId, userId });
-  if (!file) throw new Error('File not found');
-
-  const filePath = file.localPath; // Ensure 'localPath' is saved in your DB
-  if (!fs.existsSync(filePath)) throw new Error('File does not exist');
-
-  const sizes = [500, 250, 100];
-
-  // Generate thumbnails
-  for (const size of sizes) {
-    try {
-      const options = { width: size };
-      const thumbnailBuffer = thumbnail(filePath, options);
-
-      const thumbnailPath = `${filePath}_${size}`;
-      fs.writeFileSync(thumbnailPath, thumbnailBuffer);
-      console.log(`Thumbnail generated: ${thumbnailPath}`);
-    } catch (error) {
-      console.error(
-        `Failed to generate thumbnail for size ${size}:`,
-        error.message,
-      );
-    }
-  }
+const fileQueue = new Bull('fileQueue', {
+  redis: { host: 'localhost', port: 6379 }, // Configure Redis
 });
 
-console.log('Worker started...');
+// Worker to process image thumbnail generation
+fileQueue.process(async (job) => {
+  const { userId, fileId } = job.data;
+
+  if (!fileId || !userId) {
+    throw new Error('Missing fileId or userId');
+  }
+
+  // Retrieve the file document from DB
+  const file = await dbClient.db
+    .collection('files')
+    .findOne({ _id: new ObjectId(fileId), userId: new ObjectId(userId) });
+
+  if (!file) {
+    throw new Error('File not found');
+  }
+
+  if (file.type !== 'image') {
+    throw new Error('The file is not an image');
+  }
+
+  // Check if the file exists locally
+  const filePath = file.localPath;
+  if (!fs.existsSync(filePath)) {
+    throw new Error('File not found locally');
+  }
+
+  // Generate thumbnails of size 500, 250, 100
+  const sizes = [500, 250, 100];
+  for (const size of sizes) {
+    try {
+      const thumbnail = await imageThumbnail(filePath, { width: size });
+      const thumbnailPath = filePath.replace(/(\.\w+)$/, `_${size}$1`);
+
+      // Save the thumbnail locally
+      fs.writeFileSync(thumbnailPath, thumbnail);
+    } catch (error) {
+      console.error(`Error generating thumbnail for ${size}:`, error);
+      throw new Error('Error generating thumbnails');
+    }
+  }
+
+  console.log(`Thumbnails generated for file ${fileId}`);
+});

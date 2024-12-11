@@ -3,9 +3,16 @@ import mime from 'mime-types';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import Bull from 'bull';
+// import imageThumbnail from 'image-thumbnail';
 // import { isOwner } from '../utils/helpers';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
+
+// Initialize Bull queue
+const fileQueue = new Bull('fileQueue', {
+  redis: { host: 'localhost', port: 6379 }, // Configure Redis
+});
 
 class FilesController {
   static async postUpload(req, res) {
@@ -37,7 +44,7 @@ class FilesController {
     }
 
     // Handle parentId validation for non-folder types
-    if (parentId !== 0) {
+    if (parentId !== '0') {
       const parentFile = await dbClient.db
         .collection('files')
         .findOne({ _id: new ObjectId(parentId) });
@@ -49,10 +56,9 @@ class FilesController {
       }
     }
 
-    // Create the file entry in the database
+    // Check if the file is of type image
     let localPath = '';
     if (type !== 'folder') {
-      // Decode the base64 file content and save it locally
       const fileBuffer = Buffer.from(data, 'base64');
       const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
       if (!fs.existsSync(folderPath)) {
@@ -65,23 +71,27 @@ class FilesController {
       fs.writeFileSync(localPath, fileBuffer);
     }
 
-    // Insert the new file document into the database
+    // Insert file into DB
     const fileData = {
       userId: new ObjectId(userId),
       name,
       type,
       isPublic,
-      parentId: parentId !== 0 ? new ObjectId(parentId) : 0,
+      parentId: parentId !== '0' ? new ObjectId(parentId) : 0,
+      localPath: type !== 'folder' ? localPath : undefined,
     };
-
-    if (type !== 'folder') {
-      fileData.localPath = localPath;
-    }
 
     const result = await dbClient.db.collection('files').insertOne(fileData);
 
-    // console.log(result)
+    // If it's an image, add a job to the queue to generate thumbnails
+    if (type === 'image') {
+      fileQueue.add({
+        userId,
+        fileId: result.ops[0]._id.toString(),
+      });
+    }
 
+    // Return response
     return res.status(201).json({
       id: result.ops[0]._id,
       userId: result.ops[0].userId,
@@ -243,6 +253,7 @@ class FilesController {
   // GET /files/:id/data
   static async getFile(req, res) {
     const { id } = req.params;
+    const { size } = req.query;
     const token = req.header('X-Token');
 
     // Retrieve the file document
@@ -273,7 +284,18 @@ class FilesController {
     }
 
     // Check if the file is locally present
-    const filePath = file.localPath;
+    let filePath = file.localPath;
+
+    // If a size is specified, check if the thumbnail exists
+    if (size && [100, 250, 500].includes(parseInt(size, 10))) {
+      const thumbnailPath = filePath.replace(/(\.\w+)$/, `_${size}$1`);
+      if (fs.existsSync(thumbnailPath)) {
+        filePath = thumbnailPath;
+      } else {
+        return res.status(404).json({ error: 'Thumbnail not found' });
+      }
+    }
+
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Not found' });
     }
