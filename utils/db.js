@@ -12,7 +12,6 @@ class DBClient {
     });
 
     this.connected = false;
-    this.db = null;
 
     this.client
       .connect()

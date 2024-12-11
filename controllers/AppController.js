@@ -1,8 +1,8 @@
 /**
  * Contains routes to contrl app behaviours includubg status, stats etc
  */
-import redisClient from '../utils/redis.js';
-import dbClient from '../utils/db.js';
+import redisClient from '../utils/redis';
+import dbClient from '../utils/db';
 
 class AppController {
   static async getStatus(req, res) {
