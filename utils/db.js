@@ -5,7 +5,6 @@ class DBClient {
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || '27017';
     this.dbName = process.env.DB_DATABASE || 'files_manager';
-    this.db = this.client.db(this.dbName);
 
     const uri = `mongodb://${host}:${port}`;
     this.client = new MongoClient(uri, {
@@ -13,11 +12,13 @@ class DBClient {
     });
 
     this.connected = false;
+    this.db = null;
 
     this.client
       .connect()
       .then(() => {
         this.connected = true;
+        this.db = this.client.db(this.dbName);
       })
       .catch((err) => {
         console.error('Error connecting to MongoDB:', err.message);
@@ -29,7 +30,7 @@ class DBClient {
   }
 
   async nbUsers() {
-    if (!this.isAlive()) {
+    if (!this.isAlive() || !this.db) {
       return 0;
     }
     const users = this.db.collection('users');
@@ -37,11 +38,11 @@ class DBClient {
   }
 
   async nbFiles() {
-    if (!this.isAlive()) {
+    if (!this.isAlive() || !this.db) {
       return 0;
     }
-    const users = this.db.collection('files');
-    return users.countDocuments();
+    const files = this.db.collection('files');
+    return files.countDocuments();
   }
 }
 
