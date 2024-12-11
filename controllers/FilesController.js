@@ -157,6 +157,88 @@ class FilesController {
     // Return the list of files
     return res.json(files);
   }
+
+  // PUT /files/:id/publish
+  static async putPublish(req, res) {
+    const { id } = req.params;
+    const token = req.header('X-Token');
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Retrieve the user from Redis based on token
+    const userId = await redisClient.get(`auth_${token}`);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Find the file document
+    const file = await dbClient.db
+      .collection('files')
+      .findOne({ _id: new ObjectId(id), userId: new ObjectId(userId) });
+
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    // Update isPublic to true
+    const updatedFile = await dbClient.db
+      .collection('files')
+      .updateOne({ _id: new ObjectId(id) }, { $set: { isPublic: true } });
+
+    if (updatedFile.modifiedCount === 0) {
+      return res.status(400).json({ error: 'Failed to publish file' });
+    }
+
+    // Return the updated file document
+    const updatedFileData = await dbClient.db
+      .collection('files')
+      .findOne({ _id: new ObjectId(id) });
+
+    return res.status(200).json(updatedFileData);
+  }
+
+  // PUT /files/:id/unpublish
+  static async putUnpublish(req, res) {
+    const { id } = req.params;
+    const token = req.header('X-Token');
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Retrieve the user from Redis based on token
+    const userId = await redisClient.get(`auth_${token}`);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Find the file document
+    const file = await dbClient.db
+      .collection('files')
+      .findOne({ _id: new ObjectId(id), userId: new ObjectId(userId) });
+
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    // Update isPublic to false
+    const updatedFile = await dbClient.db
+      .collection('files')
+      .updateOne({ _id: new ObjectId(id) }, { $set: { isPublic: false } });
+
+    if (updatedFile.modifiedCount === 0) {
+      return res.status(400).json({ error: 'Failed to unpublish file' });
+    }
+
+    // Return the updated file document
+    const updatedFileData = await dbClient.db
+      .collection('files')
+      .findOne({ _id: new ObjectId(id) });
+
+    return res.status(200).json(updatedFileData);
+  }
 }
 
 export default FilesController;
