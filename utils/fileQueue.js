@@ -1,15 +1,19 @@
-import { Queue } from 'bull';
-// import path from 'path';
+import Bull from 'bull';
+import imageThumbnail from 'image-thumbnail';
 import fs from 'fs';
-import { generateThumbnail } from 'image-thumbnail';
+// import path from 'path';
 import dbClient from './db';
 
-const fileQueue = new Queue('fileQueue');
+// Create the Bull queue
+const fileQueue = new Bull('fileQueue', {
+  redis: { host: 'localhost', port: 6379 }, // Configure Redis for Bull
+});
 
-// Processing the file queue
+// Process jobs in the fileQueue
 fileQueue.process(async (job) => {
   const { userId, fileId } = job.data;
 
+  // Step 1: Check if both fileId and userId are provided
   if (!fileId) {
     throw new Error('Missing fileId');
   }
@@ -17,6 +21,7 @@ fileQueue.process(async (job) => {
     throw new Error('Missing userId');
   }
 
+  // Step 2: Retrieve the file document from DB
   const file = await dbClient.db
     .collection('files')
     .findOne({ _id: fileId, userId });
@@ -24,17 +29,27 @@ fileQueue.process(async (job) => {
     throw new Error('File not found');
   }
 
-  // Generate thumbnails
-  const { localPath } = file;
-  const sizes = [500, 250, 100];
-  try {
-    for (const size of sizes) {
-      const thumbnail = generateThumbnail(localPath, { width: size });
-      const thumbnailPath = `${localPath}_${size}`;
+  // Step 3: Check if the file is an image
+  if (file.type !== 'image') {
+    throw new Error('File is not an image');
+  }
+
+  // Step 4: Generate thumbnails
+  const filePath = file.localPath; // Path to the original image file
+  const sizes = [500, 250, 100]; // Thumbnail sizes to generate
+
+  for (const size of sizes) {
+    try {
+      const thumbnail = await imageThumbnail(filePath, { width: size });
+      const thumbnailPath = filePath.replace('.png', `_${size}.png`);
+
+      // Store the generated thumbnail
       fs.writeFileSync(thumbnailPath, thumbnail);
+    } catch (err) {
+      throw new Error(
+        `Error generating thumbnail for size ${size}: ${err.message}`,
+      );
     }
-  } catch (error) {
-    console.error('Error generating thumbnails:', error.message);
   }
 });
 
