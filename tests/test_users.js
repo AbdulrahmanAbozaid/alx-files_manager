@@ -98,6 +98,11 @@ describe('GET /users/me', function() {
     newStub = sinon.stub(UsersController, 'getMe').resolves(respBody);
   });
 
-  afterEach();
-  it
+  afterEach(function() {
+    newStub.restore();
+  });
+
+  it('Returns the user by the token passed i the header', function(done) {
+    
+  });
 });
